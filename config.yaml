@@ -1,0 +1,102 @@
+# =============================================================================
+# job_matcher configuration
+# -----------------------------------------------------------------------------
+# Every value here can also be overridden on the command line, e.g.:
+#   python main.py --resume resume.pdf --top-k 30 --model qwen3:4b
+# CLI flags always win over this file; this file always wins over defaults.
+# =============================================================================
+
+# --- models -------------------------------------------------------------------
+qwen:
+  model: qwen3:4b                 # any local Ollama model tag
+  base_url: http://localhost:11434
+  temperature: 0.1                # low temperature => stable JSON
+  num_ctx: 4096                   # context window (lower it on 8 GB RAM)
+  max_retries: 2                  # retries on invalid JSON / transport errors
+  request_timeout: 300
+  disable_thinking: true          # qwen3: /no_think + think=False (faster JSON)
+  num_predict: 1024
+
+embedding_model: BAAI/bge-small-en-v1.5   # swap freely; ~130 MB, CPU friendly
+embedding_batch_size: 32
+
+# --- experience policy (sections 6-8) ------------------------------------------
+experience:
+  candidate_experience_policy: relevant     # relevant | total
+  soft_experience_mode: false               # near-misses become BORDERLINE instead of REJECTED
+  soft_experience_gap_tolerance: 1.0        # years below the minimum still allowed in soft mode
+  overqualification_absolute_gap: 2.0       # years above the reference before flagging
+  overqualification_ratio: 1.75             # candidate/reference ratio before flagging
+  reject_underqualified: true
+  reject_severe_overqualification: true
+  infer_experience_from_seniority: true     # e.g. "Senior" title -> ~5-10y (low confidence)
+  adjacent_domain_credit: 0.5               # CV years credited toward an ML requirement
+  software_engineering_uses_total: true     # SWE requirements assume whole-career experience
+
+# --- matching / scoring thresholds (sections 15, 19) ---------------------------
+matching:
+  match_threshold: 75            # final score >= this  -> MATCH
+  borderline_threshold: 60       # 60-74                -> BORDERLINE
+  embedding_threshold: 0.25      # raw cosine floor to reach the Qwen stage
+  embedding_score_floor: 0.35    # cosine similarity mapped to embedding score 0
+  embedding_score_ceiling: 0.85  # cosine similarity mapped to embedding score 100
+  top_k_embedding: 50            # jobs sent to Qwen after semantic ranking
+  max_qwen_jobs: 50              # hard cap on Qwen analysis calls per run
+  min_career_alignment: 40       # below -> REJECTED (LOW_CAREER_ALIGNMENT)
+  seniority_gap_tolerance: 1     # +/- levels tolerated between candidate and job
+  reject_seniority_mismatch: true
+  must_have_match_level: exact   # exact | related (how a must-have skill is satisfied)
+  reject_on_missing_required_skills: false  # strict mode: reject when job-required skills are missing
+  qwen_low_score_cap: 20         # Qwen match_score <= this caps the verdict at BORDERLINE
+  qwen_deterministic_tolerance: 40   # |qwen - deterministic| beyond this -> deterministic wins
+  max_description_chars_embedding: 1500
+  max_description_chars_qwen: 4000
+  score_weights:                 # must roughly sum to 1.0 (auto-normalised)
+    experience: 0.30
+    skills: 0.25
+    embedding: 0.20
+    responsibility: 0.10
+    domain: 0.10
+    career_alignment: 0.05
+
+# --- scraping -------------------------------------------------------------------
+scraping:
+  sites: [linkedin, indeed]
+  results_wanted: 30             # per (query, location) call
+  max_search_queries: 6
+  max_scrape_calls: 12           # query x location combinations
+  country_indeed: india          # Indeed country subdomain
+  linkedin_fetch_description: true
+  request_delay_seconds: 1.0
+
+# --- filters --------------------------------------------------------------------
+max_job_age_days: 14             # posted_date filter (unknown dates are kept)
+locations: []                    # e.g. [Bangalore, Hyderabad, Pune, Remote]; empty = no filter
+work_modes: []                   # e.g. [remote, hybrid]; empty = no filter
+employment_types: []             # e.g. [full_time, contract]; empty = no filter
+
+# Roles the candidate is moving toward (target_roles from the resume are
+# merged with this list). Historical experience does NOT whitelist roles here.
+role_whitelist: []               # e.g. [AI Engineer, ML Engineer]
+
+# Hard career-direction exclusions — matching these titles is rejected even
+# when the candidate has the historical experience for them.
+role_blacklist:
+  - telecom engineer
+  - telecom
+  - network engineer
+  - network operations
+  - sales engineer
+  - civil engineer
+  - electrical maintenance
+  - electrical engineer
+  - site engineer
+
+# Every recommended job must involve these skills (job-involvement semantics,
+# e.g. only deployment-heavy roles: [Model Deployment, Quantization]).
+must_have_skills: []
+
+# --- paths -----------------------------------------------------------------------
+paths:
+  database: data/jobs.db
+  output_dir: data
