@@ -1,0 +1,22 @@
+# Core pipeline
+pydantic>=2.5
+PyYAML>=6.0
+
+# Scraping (import name: jobspy)
+python-jobspy>=0.1.98
+
+# Resume parsing (either one is enough; PyMuPDF is faster and more accurate)
+PyMuPDF>=1.24
+pypdf>=4.0
+
+# Embeddings (CPU-friendly; install torch first if you need GPU support)
+sentence-transformers>=2.7
+torch>=2.1
+numpy>=1.24
+
+# Local LLM
+ollama>=0.4
+requests>=2.31
+
+# Dev / tests
+pytest>=8.0
